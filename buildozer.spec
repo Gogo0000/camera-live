@@ -16,9 +16,9 @@ warn_on_root = 1
 
 [app:android]
 android.minapi = 26
-android.api = 33
+android.api = 34
 android.ndk = 25b
-android.sdk = 33
+android.sdk = 34
 android.ndk_api = 26
 android.archs = arm64-v8a
 
