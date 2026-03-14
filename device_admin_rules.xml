@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    device_admin_rules.xml
+    ─────────────────────────────────────────────────────────────────────────
+    Kurumsal Cihaz Güvenliği Uygulaması – Device Administrator Politika Dosyası
+
+    Yerleştirme:
+        res/xml/device_admin_rules.xml
+
+    AndroidManifest.xml'de şu receiver tanımlanmalıdır:
+        <receiver
+            android:name=".DeviceAdminReceiver"
+            android:description="@string/app_description"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin_rules" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+    ─────────────────────────────────────────────────────────────────────────
+-->
+<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-policies>
+
+        <!--
+            Ekran kilit şifresi belirleme ve politika uygulama.
+            Şifre girilmeden uygulama kaldırılamaması için zorunludur.
+        -->
+        <limit-password />
+
+        <!--
+            Belirli sayıda yanlış şifre denemesinden sonra
+            cihazı fabrika ayarlarına sıfırlama (uzak silme).
+        -->
+        <wipe-data />
+
+        <!--
+            Ekranı uzaktan kilitleme yetkisi.
+            Çalınan / kaybolan cihazda anında kilit.
+        -->
+        <force-lock />
+
+        <!--
+            Şifre geçerlilik süresini zorlama.
+            Kurumsal politika gereği periyodik şifre değişimi.
+        -->
+        <expire-password />
+
+        <!--
+            Şifrelenmiş depolama alanı zorunluluğu.
+            Cihaz üzerindeki veriler her zaman şifreli kalır.
+        -->
+        <encrypted-storage />
+
+        <!--
+            Kamera kullanımını yönetme (devre dışı bırakma dahil).
+            Hassas ortamlarda kamera izinlerini merkezi olarak yönetir.
+        -->
+        <disable-camera />
+
+        <!--
+            Ekran kilidi özelliklerini yönetme (parmak izi, PIN vb.).
+        -->
+        <disable-keyguard-features />
+
+    </uses-policies>
+
+</device-admin>
