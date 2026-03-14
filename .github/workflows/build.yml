@@ -50,6 +50,11 @@ jobs:
         ln -sf $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager \
                android-sdk/tools/bin/sdkmanager
 
+    - name: Check files
+      run: |
+        ls -la
+        cat buildozer.spec | head -20
+
     - name: Build APK
       run: |
         buildozer android debug
