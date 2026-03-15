@@ -50,11 +50,25 @@ jobs:
         ln -sf $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager \
                android-sdk/tools/bin/sdkmanager
 
+    - name: Verify files
+      run: |
+        echo "=== ROOT ===" && ls -la
+        echo "=== SRC ===" && ls -la src/ || echo "src/ yok"
+        echo "=== RES ===" && ls -la res/xml/ || echo "res/xml/ yok"
+        echo "=== SERVICE ===" && ls -la service/ || echo "service/ yok"
+        cat buildozer.spec | grep -E "add_src|add_resources|services"
+
     - name: Build APK
       run: |
         buildozer android debug 2>&1 | tee build.log
-        echo "=== SON 50 SATIR ===" 
-        tail -50 build.log
+        tail -30 build.log
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: shinsoo-apk
+        path: bin/*.apk
+        if-no-files-found: warn
 
     - name: Upload log
       if: always()
@@ -62,10 +76,3 @@ jobs:
       with:
         name: build-log
         path: build.log
-
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: cyber-dashboard-apk
-        path: bin/*.apk
-        if-no-files-found: warn
